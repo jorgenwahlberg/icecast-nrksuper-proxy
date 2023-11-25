@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "express": "4.18.2",
+    "ip" : "1.1.8",
+    "icy": "^2.1.0",
+    "express-status-monitor": "1.3.4"
+  },
+  "name": "icecast-nrksuper-proxy",
+  "version": "0.9.0",
+  "description": "Simple proxy playing NRK Super, ingesting Now Playing metadata",
+  "main": "src/proxy.js",
+  "scripts": {
+    "start": "node src/proxy.js",
+    "test": "mocha --reporter spec"
+  },
+  "author": "Jørgen Veum-Wahlberg",
+  "license": "ISC"
+}
