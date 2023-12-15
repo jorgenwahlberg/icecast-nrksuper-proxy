@@ -92,6 +92,10 @@ function getCurrentStreamInfo(callback) {
   // See https://psapi.nrk.no/documentation/ for some more information.
   
   fetch(apiUrl).then((response) => response.text()).then((body) => {
+    if (!body) {
+      console.log("Empty response from apiUrl");
+      return;
+    }
     var tracks = JSON.parse(body);
     var currentTrack = undefined;
     for(var i in tracks) {
