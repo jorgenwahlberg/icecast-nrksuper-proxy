@@ -13,11 +13,29 @@ Stream sources for NRK: https://lyd.nrk.no/
 
 */
 
+const CHANNELS = {
+  super: {
+    sourceUrl: "https://lyd.nrk.no/icecast/mp3/low/s0w7hwn47m/radio_super",
+    apiUrl: "https://psapi.nrk.no/channels/radio_super/liveelements",
+    name: "NRK Radio Super",
+  },
+  p1: {
+    sourceUrl: "https://lyd.nrk.no/icecast/mp3/high/s0w7hwn47m/p1",
+    apiUrl: "https://psapi.nrk.no/channels/p1/liveelements",
+    name: "NRK P1",
+  },
+  mp3: {
+    sourceUrl: "https://lyd.nrk.no/icecast/mp3/low/s0w7hwn47m/mp3",
+    apiUrl: "https://psapi.nrk.no/channels/mp3/liveelements",
+    name: "NRK MP3"
+  },
+
+};
+
 
 const META_INTERVAL=4096;
-const STREAM_SOURCE_URL =  'http://lyd.nrk.no:80/nrk_super_mp3_h?_hdr=0'
 
-// status endpoint
+// status endpoint on http://localhost:3000/status
 app.use(require('express-status-monitor')());
 
 // stream playlist (points to other endpoint)
@@ -32,14 +50,17 @@ app.get('/', playlistEndpoint);
 app.get('/listen.m3u', playlistEndpoint);
 
 // express server listen endpoint
-app.get('/listen', (req, res) => {
+app.get('/listen/:channel', (req, res) => {
 
-  // connect to the remote stream
-  icy.get(STREAM_SOURCE_URL, function (icyRes) {
+  let channel = req.params.channel;
+
+  let sourceUrl = CHANNELS[channel].sourceUrl;
+
+  icy.get(sourceUrl, function (icyRes) {
 
     // log the HTTP response headers
-    console.log(`Connected to ${STREAM_SOURCE_URL}`);
-
+    console.log(`Connected to ${sourceUrl}`);
+    
     const icyWriter = icy.Writer(META_INTERVAL);
     
     // log any "metadata" events that happen
@@ -55,7 +76,7 @@ app.get('/listen', (req, res) => {
     var headers = {
       "Content-Type": 'audio/mpeg',
       "icy-metaint" : META_INTERVAL,
-      "icy-name" : "NRK Radio Super" // FIXME: read from original stream instead
+      "icy-name" : CHANNELS[channel].name // FIXME: read from original stream instead
     };
     res.writeHead(200, headers);
 
@@ -64,11 +85,11 @@ app.get('/listen', (req, res) => {
 
     // update track title every 10 seconds
     var intervalId = setInterval(function() {
-      getCurrentStreamInfo(function(meta) { meta && icyWriter.queue(meta) })
+      getCurrentStreamInfo(channel, function(meta) { meta && icyWriter.queue(meta) })
     }, 10000);
 
     // stop interval timer when stream closes
-    req.connection.on("close", function() {
+    req.on("close", function() {
       console.log("Connection closed");
       clearInterval(intervalId);
     });
@@ -79,14 +100,16 @@ app.get('/listen', (req, res) => {
 
   });
 
+
+
 })
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
 
-function getCurrentStreamInfo(callback) {
-  apiUrl = 'https://psapi.nrk.no/channels/radio_super/liveelements';
+function getCurrentStreamInfo(channel, callback) {
+  let apiUrl = CHANNELS[channel].apiUrl;
   // This URL returns a list of tracks recently played and to be played in the near future.
   // We assume that it's sorted by time and select the last track marked as "Present" as the current track.
   // See https://psapi.nrk.no/documentation/ for some more information.

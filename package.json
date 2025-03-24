@@ -2,7 +2,7 @@
   "dependencies": {
     "express": "4.18.2",
     "ip" : "1.1.8",
-    "icy": "^2.1.0",
+    "icy" : "https://github.com/broberson/node-icy",
     "express-status-monitor": "1.3.4"
   },
   "name": "icecast-nrksuper-proxy",
