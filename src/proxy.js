@@ -1,12 +1,11 @@
 const icy = require('icy');
-const ip = require('ip');
 const express = require('express');
 const app = express();
 const port = 3000;
 
 /*
 
-Running on OK on Node.js 21.2.0
+Running on OK on Node.js 22.11.0
 Icy library used: https://www.npmjs.com/package/icy 
 
 Stream sources for NRK: https://lyd.nrk.no/
@@ -18,18 +17,32 @@ const CHANNELS = {
     sourceUrl: "https://lyd.nrk.no/icecast/mp3/low/s0w7hwn47m/radio_super",
     apiUrl: "https://psapi.nrk.no/channels/radio_super/liveelements",
     name: "NRK Radio Super",
+    passTrackInfo: false,
   },
   p1: {
     sourceUrl: "https://lyd.nrk.no/icecast/mp3/high/s0w7hwn47m/p1",
-    apiUrl: "https://psapi.nrk.no/channels/p1/liveelements",
+    apiUrl: "https://psapi.nrk.no/channels/p1_oslo_akershus/liveelements",
     name: "NRK P1",
+    passTrackInfo: false,
   },
   mp3: {
     sourceUrl: "https://lyd.nrk.no/icecast/mp3/low/s0w7hwn47m/mp3",
     apiUrl: "https://psapi.nrk.no/channels/mp3/liveelements",
-    name: "NRK MP3"
+    name: "NRK MP3",
+    passTrackInfo: false,
   },
-
+  p3: {
+    sourceUrl: "https://lyd.nrk.no/icecast/mp3/high/s0w7hwn47m/p3",
+    apiUrl: "https://psapi.nrk.no/channels/p3/liveelements",
+    name: "NRK P3",
+    passTrackInfo: false,
+  },
+  p13: {
+    sourceUrl: "https://lyd.nrk.no/icecast/mp3/high/s0w7hwn47m/p13",
+    apiUrl: "https://psapi.nrk.no/channels/p13/liveelements",
+    name: "NRK P13",
+    passTrackInfo: false,
+  },
 };
 
 
@@ -37,17 +50,6 @@ const META_INTERVAL=4096;
 
 // status endpoint on http://localhost:3000/status
 app.use(require('express-status-monitor')());
-
-// stream playlist (points to other endpoint)
-var playlistEndpoint = function(req, res) {
-  res.status(200);
-  res.set('Content-Type', 'audio/x-mpegurl');
-  res.send('http://' + ip.address() + ':' + port + '/listen');
-}.bind(this);
-
-// express playlist endpoints
-app.get('/', playlistEndpoint);
-app.get('/listen.m3u', playlistEndpoint);
 
 // express server listen endpoint
 app.get('/listen/:channel', (req, res) => {
@@ -67,16 +69,18 @@ app.get('/listen/:channel', (req, res) => {
     icyRes.on('metadata', function (metadata) {
       var parsed = icy.parse(metadata);
       console.log("metadata in source stream: " + JSON.stringify(parsed));
-      // if we have metadata in the stream, we pass it on
+      // if we have metadata in the stream, we can pass it on
       if (parsed.StreamTitle) {
-        icyWriter.queue(parsed.StreamTitle);
+        if (CHANNELS[channel].passTrackInfo) {
+          icyWriter.queue(parsed.StreamTitle);
+        }
       }
     });
 
     var headers = {
       "Content-Type": 'audio/mpeg',
       "icy-metaint" : META_INTERVAL,
-      "icy-name" : CHANNELS[channel].name // FIXME: read from original stream instead
+      "icy-name" : CHANNELS[channel].name
     };
     res.writeHead(200, headers);
 
@@ -128,7 +132,7 @@ function getCurrentStreamInfo(channel, callback) {
       }
     }
     if (currentTrack) {
-      console.log("Track info from psapi@nrk: "+JSON.stringify(currentTrack));
+      console.log("Track info from "+apiUrl+" : "+JSON.stringify(currentTrack));
       var currentTrackText = formatStreamTitle(currentTrack.title, currentTrack.description);
       console.log("Formatted track description: "+currentTrackText);
       callback(currentTrackText);
@@ -150,7 +154,6 @@ function formatStreamTitle(title, description) {
     streamTitleFlip = !streamTitleFlip;
     return (streamTitleFlip ? title+" – "+ description : description+" – "+ title);
   }
-  return ("...");
 }
 
 console.log("Starting server");
