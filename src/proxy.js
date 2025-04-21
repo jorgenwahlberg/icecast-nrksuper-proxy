@@ -9,6 +9,7 @@ Running on OK on Node.js 22.11.0
 Icy library used: https://www.npmjs.com/package/icy 
 
 Stream sources for NRK: https://lyd.nrk.no/
+NRK API: https://psapi.nrk.no/channels/CHANNEL/liveelements
 
 */
 
@@ -55,6 +56,7 @@ app.use(require('express-status-monitor')());
 app.get('/listen/:channel', (req, res) => {
 
   let channel = req.params.channel;
+  // FIXME: check if channel is defined in CHANNEL and send error message otherwise
 
   let sourceUrl = CHANNELS[channel].sourceUrl;
 
@@ -68,7 +70,7 @@ app.get('/listen/:channel', (req, res) => {
     // log any "metadata" events that happen
     icyRes.on('metadata', function (metadata) {
       var parsed = icy.parse(metadata);
-      console.log("metadata in source stream: " + JSON.stringify(parsed));
+      console.log("recieved metadata in source stream: " + JSON.stringify(parsed));
       // if we have metadata in the stream, we can pass it on
       if (parsed.StreamTitle) {
         if (CHANNELS[channel].passTrackInfo) {
@@ -108,9 +110,11 @@ app.get('/listen/:channel', (req, res) => {
 
 })
 
+// Start server
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
+console.log("Starting server");
 
 function getCurrentStreamInfo(channel, callback) {
   let apiUrl = CHANNELS[channel].apiUrl;
@@ -156,7 +160,6 @@ function formatStreamTitle(title, description) {
   }
 }
 
-console.log("Starting server");
 
 
 
